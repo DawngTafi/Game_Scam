@@ -389,13 +389,13 @@ public class CardDistribution : MonoBehaviour
         // Chuyển lượt
         currentPlayer = GetNextPlayer();
         Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
-        //if (!activePlayers.Contains(playerIndex))
-        //{
-        //    Debug.Log($"Người chơi {playerIndex + 1} đã bị loại và không thể thực hiện hành động.");
-        //    currentPlayer = GetNextPlayer();
-        //    Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
-        //    return;
-        //}
+        if (!activePlayers.Contains(playerIndex))
+        {
+           Debug.Log($"Người chơi {playerIndex + 1} đã bị loại và không thể thực hiện hành động.");
+           currentPlayer = GetNextPlayer();
+           Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
+           return;
+        }
     }
 
     bool IsCenterMatchingAssign()
@@ -461,6 +461,8 @@ public class CardDistribution : MonoBehaviour
         // Bắt đầu coroutine để trì hoãn 3 giây trước khi reset và chuyển lượt
         StartCoroutine(DelayedResetAndNextTurn());
     }
+
+    
     IEnumerator DelayedResetAndNextTurn()
     {
         yield return new WaitForSeconds(3); // Trì hoãn 3 giây
@@ -506,17 +508,57 @@ public class CardDistribution : MonoBehaviour
         // Lair3.gameObject.SetActive(true);
         // Lair4.gameObject.SetActive(true);
 
-        if (activePlayers.Count <= 1)
+        if (activePlayers.Count == 1)
         {
             Debug.Log("Game Over! Going to WinScene");
-            SceneManager.LoadScene("Winner");
+            EndGame();
         }
     }
+    void SaveAvatarsWithRanking()
+    {
+        // Khởi tạo danh sách avatar theo thứ tự thắng/thua
+        List<Sprite> rankedAvatars = new List<Sprite>();
+
+        // Thêm người chiến thắng (người cuối cùng trong activePlayers)
+        if (activePlayers.Count == 1)
+        {
+            int winnerIndex = activePlayers[0];
+            rankedAvatars.Add(GetAvatarSprite(winnerIndex));
+        }
+
+        // Thêm avatar theo thứ tự bị loại
+        foreach (int playerIndex in eliminationOrder)
+        {
+            rankedAvatars.Add(GetAvatarSprite(playerIndex));
+        }
+
+        // Lưu danh sách avatar vào GameData
+        GameData.Instance.avatarSprites = rankedAvatars.ToArray();
+    }
+
+    Sprite GetAvatarSprite(int playerIndex)
+    {
+        switch (playerIndex)
+        {
+            case 0: return Avatar1.GetComponent<Image>().sprite;
+            case 1: return Avatar2.GetComponent<Image>().sprite;
+            case 2: return Avatar3.GetComponent<Image>().sprite;
+            case 3: return Avatar4.GetComponent<Image>().sprite;
+            default: return null;
+        }
+    }
+
+    void EndGame()
+    {
+        SaveAvatarsWithRanking();
+        SceneManager.LoadScene("Winner");
+    }
+
     void HandlePlayerEliminated(List<int> playerList, int playerIndex)
     {
         Debug.Log($"Người chơi {playerIndex + 1} bị loại!");
         playerEliminated[playerIndex] = true; // Mark the player as eliminated
-        eliminationOrder.Add(playerIndex + 1); // Add to the elimination order (player number)
+        eliminationOrder.Add(playerIndex); // Add to the elimination order (player number)
 
         activePlayers.Remove(playerIndex); // Remove from active players list
                                            //Disable buttons
@@ -524,10 +566,10 @@ public class CardDistribution : MonoBehaviour
         handToDisable.gameObject.SetActive(false);
         switch (playerIndex)
         {
-            case 0: Throw1.gameObject.SetActive(false); Lair1.gameObject.SetActive(false); Gun1.gameObject.SetActive(false); break;
-            case 1: Throw2.gameObject.SetActive(false); Lair2.gameObject.SetActive(false); Gun2.gameObject.SetActive(false); break;
-            case 2: Throw3.gameObject.SetActive(false); Lair3.gameObject.SetActive(false); Gun3.gameObject.SetActive(false); break;
-            case 3: Throw4.gameObject.SetActive(false); Lair4.gameObject.SetActive(false); Gun4.gameObject.SetActive(false); break;
+            case 0: Throw1.gameObject.SetActive(false); Lair1.gameObject.SetActive(false); Gun1.gameObject.SetActive(false); Avatar1.SetActive(false); break;
+            case 1: Throw2.gameObject.SetActive(false); Lair2.gameObject.SetActive(false); Gun2.gameObject.SetActive(false); Avatar2.SetActive(false); break;
+            case 2: Throw3.gameObject.SetActive(false); Lair3.gameObject.SetActive(false); Gun3.gameObject.SetActive(false); Avatar3.SetActive(false); break;
+            case 3: Throw4.gameObject.SetActive(false); Lair4.gameObject.SetActive(false); Gun4.gameObject.SetActive(false); Avatar4.SetActive(false); break;
 
         }
         StartCoroutine(DelayedResetRound());
@@ -639,6 +681,8 @@ public class CardDistribution : MonoBehaviour
                 RandomizeList(previousGun, previousPlayer);
             }
         }
+        StartCoroutine(DelayedResetRound());
+        
     }
     int GetPreviousPlayer(int playerIndex)
     {
