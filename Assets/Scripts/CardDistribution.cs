@@ -317,6 +317,8 @@ public class CardDistribution : MonoBehaviour
         Transform playerHand = handPlayers[playerIndex];
         return playerHand.childCount;
     }
+    private int lastPlayer = -1; // Biến lưu trữ người chơi vừa đánh
+
     int GetNextPlayer()
     {
         int nextPlayer;
@@ -326,11 +328,13 @@ public class CardDistribution : MonoBehaviour
         }
         if (activePlayers.Count == 1)
         {
+            lastPlayer = activePlayers[0];
             return activePlayers[0];
         }
 
         int currentPlayerIndex = activePlayers.IndexOf(currentPlayer);
         nextPlayer = (currentPlayerIndex + 1) % activePlayers.Count;
+        lastPlayer = currentPlayer; // Cập nhật người chơi vừa đánh
         return activePlayers[nextPlayer];
     }
 
@@ -391,10 +395,10 @@ public class CardDistribution : MonoBehaviour
         Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
         if (!activePlayers.Contains(playerIndex))
         {
-           Debug.Log($"Người chơi {playerIndex + 1} đã bị loại và không thể thực hiện hành động.");
-           currentPlayer = GetNextPlayer();
-           Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
-           return;
+            Debug.Log($"Người chơi {playerIndex + 1} đã bị loại và không thể thực hiện hành động.");
+            currentPlayer = GetNextPlayer();
+            Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
+            return;
         }
     }
 
@@ -459,18 +463,9 @@ public class CardDistribution : MonoBehaviour
         gun.text = $"{totalAmmo - playerList.Count}/6";
         Debug.Log($"Người chơi {playerIndex + 1} may mắn sống sót. Giá trị hiện tại: {gun.text}");
         // Bắt đầu coroutine để trì hoãn 3 giây trước khi reset và chuyển lượt
-        StartCoroutine(DelayedResetAndNextTurn());
+        StartCoroutine(DelayedResetRound());
     }
 
-    
-    IEnumerator DelayedResetAndNextTurn()
-    {
-        yield return new WaitForSeconds(3); // Trì hoãn 3 giây
-        ResetCenter();
-        // Skip eliminated or empty-handed players
-        currentPlayer = GetNextPlayer();
-        Debug.Log($"Đến lượt người chơi {currentPlayer + 1}.");
-    }
 
     IEnumerator DelayedResetRound()
     {
@@ -489,24 +484,18 @@ public class CardDistribution : MonoBehaviour
             }
         }
         AssignRandomCard();
+
         if (activePlayers.Count > 0)
         {
-            currentPlayer = activePlayers[0];
+            int nextPlayerIndex = (activePlayers.IndexOf(lastPlayer) + 1) % activePlayers.Count;
+            currentPlayer = activePlayers[nextPlayerIndex];
         }
+
         // Reset eliminated players
         for (int i = 0; i < playerEliminated.Length; i++)
         {
             playerEliminated[i] = false;
         }
-        //Enable All Buttons
-        // Throw1.gameObject.SetActive(true);
-        // Throw2.gameObject.SetActive(true);
-        // Throw3.gameObject.SetActive(true);
-        // Throw4.gameObject.SetActive(true);
-        // Lair1.gameObject.SetActive(true);
-        // Lair2.gameObject.SetActive(true);
-        // Lair3.gameObject.SetActive(true);
-        // Lair4.gameObject.SetActive(true);
 
         if (activePlayers.Count == 1)
         {
@@ -514,6 +503,7 @@ public class CardDistribution : MonoBehaviour
             EndGame();
         }
     }
+
     void SaveAvatarsWithRanking()
     {
         // Khởi tạo danh sách avatar theo thứ tự thắng/thua
@@ -682,7 +672,7 @@ public class CardDistribution : MonoBehaviour
             }
         }
         StartCoroutine(DelayedResetRound());
-        
+
     }
     int GetPreviousPlayer(int playerIndex)
     {
